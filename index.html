@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mansão Realista - Alucinações 2D</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #030303;
+            color: #d12323;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        h1 {
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #ff0000;
+            animation: piscarTexto 2s infinite alternate;
+        }
+        #canvasContainer {
+            position: relative;
+            border: 4px solid #1a0202;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.9);
+        }
+        canvas {
+            display: block;
+            background: #000;
+        }
+        .controles {
+            margin-top: 15px;
+            text-align: center;
+            color: #666;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+        @keyframes piscarTexto {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; transform: scale(0.99); }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>ALUCINAÇÕES: MANSÃO SOMBRIA</h1>
+    <div id="canvasContainer">
+        <canvas id="gameCanvas" width="400" height="520"></canvas>
+    </div>
+    <div class="controles">
+        <p>Use as <b>Setas Direcionais (← →)</b> ou <b>Toque nas laterais</b> do celular.</p>
+        <p>A névoa está cobrando sua sanidade. Não deixe as visões te tocarem.</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // LINKS DE IMAGENS REALISTAS/TEXTURAS DIRETAMENTE DA WEB
+        const imgBg = new Image();
+        imgBg.src = 'https://unsplash.com'; // Parede escura de mansão abandonada
+
+        const imgPlayer = new Image();
+        imgPlayer.src = 'https://unsplash.com'; // Silhueta misteriosa com capuz
+
+        const imgMonster = new Image();
+        imgMonster.src = 'https://unsplash.com'; // Expressão bizarra / Olhos assustadores vermelhos
+
+        // Configurações do Jogador
+        const player = {
+            x: 180,
+            y: 430,
+            width: 40,
+            height: 45,
+            speed: 6
+        };
+
+        // Estado Geral
+        let monsters = [];
+        let score = 0;
+        let gameOver = false;
+        let hallucinationTimer = 0;
+        let keys = {};
+
+        // Listeners de entrada (Teclado)
+        window.addEventListener('keydown', (e) => keys[e.code] = true);
+        window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+        // Controles de Toque (Mobile)
+        canvas.addEventListener('touchstart', (e) => {
+            const touchX = e.touches[0].clientX - canvas.getBoundingClientRect().left;
+            if (touchX < canvas.width / 2) keys['ArrowLeft'] = true;
+            else keys['ArrowRight'] = true;
+        });
+        canvas.addEventListener('touchend', () => {
+            keys['ArrowLeft'] = false;
+            keys['ArrowRight'] = false;
+        });
+
+        // Spawn de Monstros Alucinatórios
+        function spawnMonster() {
+            if (gameOver) return;
+            
+            const size = Math.random() * 25 + 35; // Tamanho realista dos sprites
+            monsters.push({
+                x: Math.random() * (canvas.width - size),
+                y: -size,
+                width: size,
+                height: size,
+                speed: Math.random() * 2.5 + 3,
+                glitchAlpha: 1
+            });
+
+            // Geração progressivamente mais rápida
+            setTimeout(spawnMonster, Math.max(500, 1600 - score * 15));
+        }
+
+        // Atualização da lógica
+        function update() {
+            if (gameOver) return;
+
+            // Movimento do Player
+            if (keys['ArrowLeft'] && player.x > 0) player.x -= player.speed;
+            if (keys['ArrowRight'] && player.x < canvas.width - player.width) player.x += player.speed;
+
+            hallucinationTimer += 0.05;
+
+            // Lógica dos Monstros
+            for (let i = monsters.length - 1; i >= 0; i--) {
+                let m = monsters[i];
+                m.y += m.speed;
+
+                // Modifica opacidade aleatoriamente para parecer alucinação instável
+                m.glitchAlpha = Math.random() > 0.1 ? 0.9 : 0.2;
+
+                // Teste de Colisão por sobreposição
+                if (
+                    player.x < m.x + m.width * 0.8 &&
+                    player.x + player.width * 0.8 > m.x &&
+                    player.y < m.y + m.height * 0.8 &&
+                    player.y + player.height * 0.8 > m.y
+                ) {
+                    gameOver = true;
+                }
+
+                // Remove se passar do chão e pontua
+                if (m.y > canvas.height) {
+                    monsters.splice(i, 1);
+                    score++;
+                }
+            }
+        }
+
+        // Renderização Gráfica Avançada
+        function draw() {
+            // 1. Desenha o fundo da Mansão (Repetido verticalmente para efeito de rolagem)
+            if (imgBg.complete) {
+                ctx.drawImage(imgBg, 0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = '#0a0505';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            if (!gameOver) {
+                // Efeito Estático de Alucinação Sanguenta no Ambiente
+                if (Math.sin(hallucinationTimer) > 0.7) {
+                    ctx.fillStyle = `rgba(120, 0, 0, ${Math.random() * 0.15})`;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+
+                // 2. Desenha o Jogador Realista
+                if (imgPlayer.complete) {
+                    ctx.drawImage(imgPlayer, player.x, player.y, player.width, player.height);
+                } else {
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(player.x, player.y, player.width, player.height);
+                }
+
+                // 3. Iluminação dinâmica (Efeito Lanterna/Vinheta)
+                // Cria um gradiente radial focado no jogador para simular escuridão ao redor
+                let gradient = ctx.createRadialGradient(
+                    player.x + player.width/2, player.y + player.height/2, 40, 
+                    player.x + player.width/2, player.y + player.height/2, 220
+                );
+                gradient.addColorStop(0, 'transparent');
+                gradient.addColorStop(0.6, 'rgba(0, 0, 0, 0.65)');
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0.98)');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // 4. Desenha os Monstros Sombrios
+                monsters.forEach(m => {
+                    ctx.save();
+                    ctx.globalAlpha = m.glitchAlpha;
+                    
+                    if (imgMonster.complete) {
+                        ctx.drawImage(imgMonster, m.x, m.y, m.width, m.height);
+                    } else {
+                        ctx.fillStyle = '#600';
+                        ctx.fillRect(m.x, m.y, m.width, m.height);
+                    }
+                    ctx.restore();
+                });
+
+                // Interface Textual Sombria
+                ctx.fillStyle = '#ff4444';
+                ctx.font = 'bold 16px "Courier New"';
+                ctx.fillText(`SANIDADE CORROÍDA: ${score}`, 20, 35);
+
+            } else {
+                // Tela de Fim de Jogo Realista
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.92)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Flash vermelho borrado de sangue
+                ctx.fillStyle = 'rgba(180, 0, 0, 0.3)';
+                ctx.fillRect(Math.random()*20, Math.random()*20, canvas.width, canvas.height);
+
+                ctx.fillStyle = '#ff0000';
+                ctx.font = 'bold 26px "Courier New"';
+                ctx.textAlign = 'center';
+                ctx.fillText("FIM DA SANIDADE", canvas.width / 2, canvas.height / 2 - 30);
+                
+                ctx.fillStyle = '#bbbbbb';
+                ctx.font = '15px "Courier New"';
+                ctx.fillText(`Você resistiu a ${score} aparições`, canvas.width / 2, canvas.height / 2 + 10);
+                ctx.fillText("Recarregue a página para tentar acordar", canvas.width / 2, canvas.height / 2 + 50);
+                ctx.textAlign = 'start';
+            }
+        }
+
+        // Loop principal estável
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Inicialização
+        spawnMonster();
+        gameLoop();
+    </script>
+</body>
+</html>
